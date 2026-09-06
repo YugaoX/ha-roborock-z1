@@ -1,0 +1,18 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "复用 Home Assistant 中已登录的石头账号，提供 Z1 Max 状态、启动当前程序和结束提醒。请保留原账号条目。",
+        "data": {
+          "source_entry": "已有 Roborock 账号"
+        },
+        "title": "选择已有 Roborock 账号"
+      }
+    },
+    "abort": {
+      "already_configured": "该账号已配置。",
+      "no_source": "请先添加 Roborock 集成并完成账号登录。"
+    }
+  },
+  "title": "石头 Z1 Max"
+}

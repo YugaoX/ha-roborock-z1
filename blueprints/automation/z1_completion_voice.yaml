@@ -1,0 +1,64 @@
+blueprint:
+  name: 石头 Z1 Max 完成后双屏播报（00至06点静音）
+  description: >-
+    需要 roborock_z1_monitor 0.2.1 及支持播放文本的 notify 实体。
+    洗衣机或干衣机真实完成后，两路并行播报；按 HA 时区凌晨0至6点静音且不补播。
+    保持设备音量。两处请勿选同一个实体，以免重复播报。
+  domain: automation
+  source_url: https://github.com/MXHRUI/ha-roborock-z1/blob/main/blueprints/automation/z1_completion_voice.yaml
+  input:
+    first_screen:
+      name: 第一块屏的播放文本实体
+      selector:
+        entity:
+          filter:
+            - domain: notify
+    second_screen:
+      name: 第二块屏的播放文本实体
+      selector:
+        entity:
+          filter:
+            - domain: notify
+triggers:
+  - trigger: persistent_notification
+    update_type: [added]
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger is defined and trigger.notification is defined
+         and (trigger.notification.notification_id | default('')
+              | regex_match('^roborock_z1_monitor_.+_[0-9]{13}$'))
+         and trigger.notification.title in
+              ['洗衣机 Z1 Max程序完成', '干衣机 Z1 Max程序完成'] }}
+  - condition: template
+    value_template: '{{ now().hour >= 6 }}'
+actions:
+  - parallel:
+      - sequence:
+          - condition: template
+            value_template: '{{ now().hour >= 6 }}'
+          - action: notify.send_message
+            continue_on_error: true
+            target:
+              entity_id: !input first_screen
+            data:
+              message: >-
+                {{ '洗衣机程序已完成，请及时取出衣物。'
+                   if trigger.notification.title == '洗衣机 Z1 Max程序完成'
+                   else '干衣机程序已完成，请及时取出衣物。' }}
+      - sequence:
+          - condition: template
+            value_template: '{{ now().hour >= 6 }}'
+          - action: notify.send_message
+            continue_on_error: true
+            target:
+              entity_id: !input second_screen
+            data:
+              message: >-
+                {{ '洗衣机程序已完成，请及时取出衣物。'
+                   if trigger.notification.title == '洗衣机 Z1 Max程序完成'
+                   else '干衣机程序已完成，请及时取出衣物。' }}
+mode: queued
+max: 10
+trace:
+  stored_traces: 20

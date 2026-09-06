@@ -1,0 +1,16 @@
+{
+  "domain": "roborock_z1_monitor",
+  "name": "石头 Z1 Max",
+  "version": "0.2.1",
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "documentation": "https://github.com/MXHRUI/ha-roborock-z1",
+  "codeowners": [
+    "@MXHRUI"
+  ],
+  "requirements": [
+    "python-roborock==4.8.0"
+  ],
+  "issue_tracker": "https://github.com/MXHRUI/ha-roborock-z1/issues"
+}
