@@ -2,7 +2,12 @@
 
 DOMAIN = "roborock_z1_monitor"
 SOURCE_ENTRY = "source_entry"
-MODELS = {"roborock.wm.a180": "洗衣机 Z1 Max", "roborock.cd.a188": "干衣机 Z1 Max"}
+MODELS = {
+    "roborock.wm.a180": "洗衣机 Z1 Max",
+    "roborock.cd.a188": "干衣机 Z1 Max",
+    # Experimental: retain the same A01/schema guards; no a204 enum assumptions.
+    "roborock.wm.a204": "石头洗衣机 a204",
+}
 FIELDS = {203: "status", 218: "washing_left", 220: "error"}
 START_FIELDS = {204: "mode", 205: "program", 209: "spin_level"}
 
