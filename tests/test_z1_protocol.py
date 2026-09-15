@@ -37,6 +37,36 @@ class ProtocolTests(unittest.TestCase):
     def test_unknown_state_is_preserved(self):
         self.assertEqual(p.validate_values({203: 99, 218: 0, 220: 88})[203], 99)
 
+    def test_a204_read_only_schema_does_not_enable_start(self):
+        product = self.product("roborock.wm.a204")
+        p.validate_schema(product)
+        self.assertFalse(p.supports_start(product))
+        self.assertEqual(p.validate_values({203: 99, 218: 138, 220: 88}),
+                         {203: 99, 218: 138, 220: 88})
+
+    def test_a204_missing_or_changed_read_fields_are_rejected(self):
+        for index in range(3):
+            for field, value in (("code", "unexpected"), ("mode", "rw"), ("type", "BOOL")):
+                with self.subTest(index=index, field=field):
+                    product = self.product("roborock.wm.a204")
+                    product["schema"][index][field] = value
+                    with self.assertRaises(ValueError):
+                        p.validate_schema(product)
+            product = self.product("roborock.wm.a204")
+            product["schema"].pop(index)
+            with self.assertRaises(ValueError):
+                p.validate_schema(product)
+        for query in ([], [{"id": 10000, "code": "unexpected"}]):
+            product = self.product("roborock.wm.a204")
+            product["schema"] = product["schema"][:-1] + query
+            with self.assertRaises(ValueError):
+                p.validate_schema(product)
+
+    def test_a204_allowlist_is_exact(self):
+        for model in ("a204", "roborock.cd.a204", "roborock.wm.a204x"):
+            with self.assertRaises(ValueError):
+                p.validate_schema(self.product(model))
+
 
 if __name__ == "__main__":
     unittest.main()

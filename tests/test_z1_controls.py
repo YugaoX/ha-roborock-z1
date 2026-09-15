@@ -35,6 +35,26 @@ class ControlTests(unittest.TestCase):
                 self.assertFalse(p.supports_start(changed))
         self.assertFalse(p.supports_start({"model": "unknown"}))
 
+    def test_a204_control_schema_drift_preserves_read_only_support(self):
+        readonly = [{"id": k, "code": code, "mode": "ro", "type": "VALUE"}
+                    for k, code in p.FIELDS.items()] + [{"id": 10000, "code": "id_query"}]
+        controls = [{"id": 200, "code": "start", "mode": "rw", "type": "BOOL"}]
+        controls += [{"id": k, "code": code, "mode": "rw", "type": "VALUE"}
+                     for k, code in p.START_FIELDS.items()]
+        for index in range(len(controls)):
+            for field, value in (("code", "unexpected"), ("mode", "ro"), ("type", "STRING"),
+                                 ("id", -1)):
+                with self.subTest(index=index, field=field):
+                    changed = json.loads(json.dumps(controls))
+                    changed[index][field] = value
+                    product = {"model": "roborock.wm.a204", "schema": readonly + changed}
+                    p.validate_schema(product)
+                    self.assertFalse(p.supports_start(product))
+            product = {"model": "roborock.wm.a204",
+                       "schema": readonly + controls[:index] + controls[index + 1:]}
+            p.validate_schema(product)
+            self.assertFalse(p.supports_start(product))
+
     def test_start_only_fresh_fault_free_standby(self):
         self.assertEqual(p.start_payload({203: 1, 218: 10, 220: 0, 204:4,205:9,209:1}), {204:4,205:9,209:1,200:1})
         for values in ({203: 7, 218: 138, 220: 0}, {203: 1, 218: 138, 220: 3}, {}, {203: True, 218: 0, 220: 0}):
