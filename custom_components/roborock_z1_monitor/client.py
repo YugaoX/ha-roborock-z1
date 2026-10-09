@@ -1,4 +1,4 @@
-"""Z1 adapter using python-roborock 4.8.0 authentication and transport.
+"""Z1 adapter using python-roborock 7.4.2 authentication and transport.
 
 The raw product endpoint follows that version's get_home_data_v3 implementation.
 It intentionally avoids HomeDataProduct's unsupported category conversion, without
@@ -39,11 +39,11 @@ class ReadOnlyClient:
     async def setup(self):
         # Package metadata reads the filesystem; keep it off HA's event loop.
         sdk_version = await asyncio.to_thread(version, "python-roborock")
-        _LOGGER.info("Z1 discovery build=a204-diagnostics-1 sdk=%s allowlist=%s",
+        _LOGGER.info("Z1 discovery build=a204-ha2026-9-1 sdk=%s allowlist=%s",
                      sdk_version, ",".join(MODELS))
-        if sdk_version != "4.8.0":
-            _LOGGER.error("Z1 discovery blocked: expected SDK 4.8.0, got %s", sdk_version)
-            raise ValueError("This adapter requires review before changing python-roborock 4.8.0")
+        if sdk_version != "7.4.2":
+            _LOGGER.error("Z1 discovery blocked: expected SDK 7.4.2, got %s", sdk_version)
+            raise ValueError("This adapter requires review before changing python-roborock 7.4.2")
         async with asyncio.timeout(25):
             # SDK authentication/signing; no local cryptography or token copies.
             home_id = await self.api._get_home_id(self.user)

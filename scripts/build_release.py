@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[1]
 component = root / 'custom_components/roborock_z1_monitor'
 manifest = json.loads((component/'manifest.json').read_text(encoding='utf-8'))
 assert manifest['domain'] == component.name
-assert manifest['requirements'] == ['python-roborock==4.8.0']
+assert manifest['requirements'] == ['python-roborock==7.4.2']
 assert manifest['codeowners'] and manifest['issue_tracker']
 assert json.loads((root/'hacs.json').read_text(encoding='utf-8'))['name']
 out = root/'dist'

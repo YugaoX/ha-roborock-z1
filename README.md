@@ -11,20 +11,22 @@
 | Z1 Max 洗衣机 | `roborock.wm.a180` | 状态、故障、启动、自然结束通知 |
 | Z1 Max 分子筛干衣机 | `roborock.cd.a188` | 状态、故障、启动、丝绸护理自然结束信号 |
 
-**重新排查请使用诊断版 0.2.2**，按 [A204_TESTING.md](A204_TESTING.md#022-从头安装与发现日志) 开启发现日志；Fork 的默认 main 仍不含 a204。
+**此 Fork 的 main 已包含实验性 a204 支持，版本 0.3.0。**
+目标环境为 HA Core 2026.9.2 / python-roborock 7.4.2；使用 HACS 自定义仓库安装本 Fork。
+如设备仍未出现，请按 [A204_TESTING.md](A204_TESTING.md) 开启发现日志。
 
-本分支额外接受精确型号 **`roborock.wm.a204`（实验性，尚未实机验证）**。
+本 Fork 额外接受精确型号 **`roborock.wm.a204`（实验性，尚未实机验证）**。
 通过原有 A01 和只读 DPS 校验后读取状态、程序时间和故障码；状态显示原始状态码，
 时间不推测单位。启动仅沿用原有 schema 校验通过的路径，不代表已验证 a204 控制语义。
 测试与回滚步骤见 [A204_TESTING.md](A204_TESTING.md)。
 
-实测环境：**Home Assistant 2026.2.3、python-roborock 4.8.0、ARM64 Linux**。依赖版本固定，**不承诺兼容更新的 HA 或 SDK**；较新 HA 的内置 Roborock 可能要求不同 SDK，请先核对，勿强制降级共享依赖。其他型号和全部洗护程序尚未验证。
+实测环境：**上游 0.2.1 的 Home Assistant 2026.2.3、python-roborock 4.8.0、ARM64 Linux**。本 Fork 0.3.0 已审查并离线测试 SDK **7.4.2**，与 HA **2026.9.2** 内置 Roborock 的依赖一致；没有在用户 HA 或 a204 实机上验证。仅针对这一 SDK 版本，未来升级 HA 前需核对其依赖，不要强制降级共享 SDK。
 
 ## 安装
 
 ### HACS 自定义仓库
 
-1. 在 HACS 的“自定义存储库”添加 `https://github.com/MXHRUI/ha-roborock-z1`，类型选择 **Integration / 集成**。
+1. 在 HACS 的“自定义存储库”添加 `https://github.com/YugaoX/ha-roborock-z1`，类型选择 **Integration / 集成**。
 2. 下载集成并重启 Home Assistant。
 3. 按下面的“配置账号”完成配置。
 
@@ -32,7 +34,7 @@
 
 ### 手动安装
 
-从 [Releases](https://github.com/MXHRUI/ha-roborock-z1/releases) 下载 `roborock_z1_monitor.zip`，解压后把其中的 `custom_components/roborock_z1_monitor` 放到 HA 配置目录，最终应能看到：
+从 [本 Fork 的 main](https://github.com/YugaoX/ha-roborock-z1/tree/main) 通过 Code → Download ZIP 下载代码，解压后把其中的 `custom_components/roborock_z1_monitor` 放到 HA 配置目录，最终应能看到：
 
 ```text
 <HA配置目录>/custom_components/roborock_z1_monitor/manifest.json
@@ -77,9 +79,9 @@ https://github.com/MXHRUI/ha-roborock-z1/blob/main/blueprints/automation/z1_comp
 - 干衣机 10 分钟护理的自然结束信号已实测并回放校准；未再次运行新版干衣机完整周期来验证通知。
 - 仓库的离线测试覆盖启动字段、重复启动保护、超时不重试、瞬时完成、取消、故障、过期数据和通知开关，不会操作真实设备。
 - 依赖云端账号及网络。HA 停机或网络中断期间不能保证补发完成提醒。仅认定明确结束信号，不以时间归零推断完成。
-- 当前初始化检查 SDK 版本时可能记录事件循环阻塞警告；这是已知问题。升级 SDK 前需要重新适配，本版本明确锁定 4.8.0。
+- 本 Fork 在线程中读取 SDK 元数据以避免旧版阻塞警告，运行时明确锁定 7.4.2；新增真实 SDK 的离线导入、账号解析、发现及 A01 查询/启动报文测试，不发送真实设备命令。
 
-运行测试：`python -m unittest discover -s tests -v`。
+运行测试前安装 `python-roborock==7.4.2`，然后运行 `python -m unittest discover -s tests -v`。
 
 ## 反馈与许可
 

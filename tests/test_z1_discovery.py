@@ -16,7 +16,7 @@ spec.loader.exec_module(p)
 tree = ast.parse((ROOT / "client.py").read_text(encoding="utf-8"))
 tree.body = [node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "ReadOnlyClient"]
 logger = logging.getLogger("z1_discovery_tests")
-ns = {"asyncio": asyncio, "_LOGGER": logger, "version": Mock(return_value="4.8.0"),
+ns = {"asyncio": asyncio, "_LOGGER": logger, "version": Mock(return_value="7.4.2"),
       "MODELS": p.MODELS, "FIELDS": p.FIELDS, "START_FIELDS": p.START_FIELDS,
       "validate_schema": p.validate_schema, "supports_start": p.supports_start}
 exec(compile(tree, "client_discovery", "exec"), ns)
@@ -31,7 +31,7 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
                 "devices": [] if shared else [device],
                 "receivedDevices": [device] if shared else []}
 
-    async def discover(self, home, sdk="4.8.0"):
+    async def discover(self, home, sdk="7.4.2"):
         client = object.__new__(ns["ReadOnlyClient"])
         client.user = SimpleNamespace(rriot=SimpleNamespace(r=SimpleNamespace(a="endpoint")))
         client.api = SimpleNamespace(_get_home_id=AsyncMock(return_value="private-home"))
@@ -96,10 +96,10 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_sdk_mismatch_stops_before_discovery(self):
         with self.assertRaisesRegex(ValueError, "requires review"):
-            await self.discover(self.home(), sdk="7.4.2")
+            await self.discover(self.home(), sdk="4.8.0")
         self.client.api._get_home_id.assert_not_awaited()
         self.request.assert_not_called()
-        self.assertIn("expected SDK 4.8.0, got 7.4.2", self.messages)
+        self.assertIn("expected SDK 7.4.2, got 4.8.0", self.messages)
 
 
 if __name__ == "__main__":
