@@ -23,7 +23,7 @@ exec(compile(tree, "client_discovery", "exec"), ns)
 
 
 class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
-    def home(self, model="roborock.wm.a204", shared=False):
+    def home(self, model="roborock.cd.a204", shared=False):
         schema = [{"id": k, "code": code, "mode": "ro", "type": "VALUE"}
                   for k, code in p.FIELDS.items()] + [{"id": 10000, "code": "id_query"}]
         device = {"productId": "product", "pv": "A01", "duid": "private-device"}
@@ -57,13 +57,13 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
         for shared in (False, True):
             with self.subTest(shared=shared):
                 client = await self.discover(self.home(shared=shared))
-                self.assertEqual(client.devices["private-device"]["model"], "roborock.wm.a204")
+                self.assertEqual(client.devices["private-device"]["model"], "roborock.cd.a204")
                 self.assertFalse(client.devices["private-device"]["supports_start"])
                 self.assertIn("a204=1", self.messages)
                 for private in ("private-device", "private-home", "private-token"):
                     self.assertNotIn(private, self.messages)
 
-    async def test_both_washers_in_same_account(self):
+    async def test_cloud_reported_cd_a204_and_a180_in_same_account(self):
         home = self.home()
         product = copy.deepcopy(home["products"][0])
         product.update(id="a180-product", model="roborock.wm.a180")
@@ -71,6 +71,9 @@ class DiscoveryTests(unittest.IsolatedAsyncioTestCase):
         home["devices"].append({"productId": "a180-product", "pv": "A01", "duid": "other-device"})
         client = await self.discover(home)
         self.assertEqual(len(client.devices), 2)
+        self.assertEqual({info["model"] for info in client.devices.values()},
+                         {"roborock.cd.a204", "roborock.wm.a180"})
+        self.assertIn("accepted=2 a204=1", self.messages)
 
     async def test_unknown_model_and_missing_product_have_visible_reason(self):
         # No compatible devices still raises, as in the original adapter.

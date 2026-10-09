@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 from unittest.mock import AsyncMock, Mock
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1] / 'custom_components/roborock_z1_monitor'
 spec = importlib.util.spec_from_file_location('push_cycle',ROOT/'cycle.py')
@@ -12,7 +13,8 @@ cycle = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cycle)
 tree = ast.parse((ROOT/'__init__.py').read_text(encoding='utf-8'))
 tree.body = [n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='Z1Coordinator']
-ns = {'DataUpdateCoordinator':object,'FIELDS':{203:'status',218:'washing_left',220:'error'},'advance':cycle.advance}
+ns = {'DataUpdateCoordinator':object,'FIELDS':{203:'status',218:'washing_left',220:'error'},
+      'advance':cycle.advance,'VERIFIED_COMPLETION_MODELS':cycle.VERIFIED_COMPLETION_MODELS}
 exec(compile(tree,'coordinator','exec'),ns)
 
 
@@ -20,6 +22,9 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
     def coordinator(self):
         c=object.__new__(ns['Z1Coordinator'])
         c.cycle_lock=asyncio.Lock();c.push_cache={};c.cycles={};c.preferences={}
+        c.client=SimpleNamespace(devices={'washer':{'model':'roborock.wm.a180'},
+                                         'dryer':{'model':'roborock.cd.a188'},
+                                         'a204':{'model':'roborock.cd.a204'}})
         c.save=AsyncMock();c.notify=Mock()
         return c
 
@@ -37,6 +42,19 @@ class PushTests(unittest.IsolatedAsyncioTestCase):
                          (150,{203:7,218:1}),(160,{203:10,218:10}),(180,{203:10,218:10,220:0})]:
             await c.process_push('dryer',data,now)
         c.notify.assert_called_once()
+
+    async def test_unverified_a204_completion_requires_explicit_opt_in(self):
+        for enabled in (False, True):
+            c=self.coordinator()
+            if enabled:
+                c.preferences['a204']=True
+            for now,data in [(0,{203:7,218:10,220:0}),(60,{203:8,218:3}),
+                             (120,{203:10,218:0})]:
+                await c.process_push('a204',data,now)
+            if enabled:
+                c.notify.assert_called_once()
+            else:
+                c.notify.assert_not_called()
 
     async def test_cancel_fault_stale_and_disabled_do_not_notify(self):
         for case in ('cancel','fault','stale','disabled'):

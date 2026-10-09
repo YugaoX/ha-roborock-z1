@@ -66,7 +66,7 @@ class SDKTests(unittest.IsolatedAsyncioTestCase):
         client = self.client()
         schema = [{"id": k, "code": code, "mode": "ro", "type": "VALUE"}
                   for k, code in p.FIELDS.items()] + [{"id": 10000, "code": "id_query"}]
-        home = {"products": [{"id": "test-product", "model": "roborock.wm.a204", "schema": schema}],
+        home = {"products": [{"id": "test-product", "model": "roborock.cd.a204", "schema": schema}],
                 "devices": [{"duid": "test-device", "name": "test", "localKey": "0" * 16,
                              "productId": "test-product", "pv": "A01"}]}
         session = types.SimpleNamespace(close=AsyncMock())
@@ -77,7 +77,7 @@ class SDKTests(unittest.IsolatedAsyncioTestCase):
              patch.object(c, "create_lazy_mqtt_session", AsyncMock(return_value=session)), \
              patch.object(c, "create_mqtt_channel", Mock(return_value=channel)):
             await client.setup()
-        self.assertEqual(client.devices["test-device"]["model"], "roborock.wm.a204")
+        self.assertEqual(client.devices["test-device"]["model"], "roborock.cd.a204")
         self.assertFalse(client.devices["test-device"]["supports_start"])
         request.assert_awaited_once_with("get", "/v3/user/homes/1")
         await client.close()

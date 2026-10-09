@@ -15,7 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .client import ReadOnlyClient
 from .protocol import DOMAIN, SOURCE_ENTRY, FIELDS
-from .cycle import advance, completion_text
+from .cycle import advance, completion_text, VERIFIED_COMPLETION_MODELS
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON, Platform.SWITCH]
@@ -48,7 +48,8 @@ class Z1Coordinator(DataUpdateCoordinator):
             merged = {k: cache[k][0] for k in FIELDS}
             self.cycles[device_id], event_id = advance(self.cycles.get(device_id), merged, now)
             await self.save()
-            if event_id and self.preferences.get(device_id, True):
+            verified = self.client.devices[device_id]["model"] in VERIFIED_COMPLETION_MODELS
+            if event_id and self.preferences.get(device_id, verified):
                 self.notify(device_id, event_id)
 
     async def restore(self):

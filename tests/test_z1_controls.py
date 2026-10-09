@@ -47,10 +47,10 @@ class ControlTests(unittest.TestCase):
                 with self.subTest(index=index, field=field):
                     changed = json.loads(json.dumps(controls))
                     changed[index][field] = value
-                    product = {"model": "roborock.wm.a204", "schema": readonly + changed}
+                    product = {"model": "roborock.cd.a204", "schema": readonly + changed}
                     p.validate_schema(product)
                     self.assertFalse(p.supports_start(product))
-            product = {"model": "roborock.wm.a204",
+            product = {"model": "roborock.cd.a204",
                        "schema": readonly + controls[:index] + controls[index + 1:]}
             p.validate_schema(product)
             self.assertFalse(p.supports_start(product))

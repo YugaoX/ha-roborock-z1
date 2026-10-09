@@ -6,6 +6,7 @@ emits done after cooling. Never derive completion from standby or time alone.
 
 ACTIVE = frozenset(range(2, 9))
 MAX_GAP = 180
+VERIFIED_COMPLETION_MODELS = frozenset({"roborock.wm.a180", "roborock.cd.a188"})
 
 
 def advance(old, values, now):

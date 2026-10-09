@@ -39,7 +39,7 @@ class ReadOnlyClient:
     async def setup(self):
         # Package metadata reads the filesystem; keep it off HA's event loop.
         sdk_version = await asyncio.to_thread(version, "python-roborock")
-        _LOGGER.info("Z1 discovery build=a204-ha2026-9-1 sdk=%s allowlist=%s",
+        _LOGGER.info("Z1 discovery build=a204-cd-ha2026-9-1 sdk=%s allowlist=%s",
                      sdk_version, ",".join(MODELS))
         if sdk_version != "7.4.2":
             _LOGGER.error("Z1 discovery blocked: expected SDK 7.4.2, got %s", sdk_version)
@@ -96,7 +96,7 @@ class ReadOnlyClient:
                 _LOGGER.info("Z1 discovery accepted model=%s protocol=A01 supports_start=%s",
                              model, self.devices[device.duid]["supports_start"])
             _LOGGER.info("Z1 discovery finished accepted=%d a204=%d", len(self.devices),
-                         sum(info["model"] == "roborock.wm.a204" for info in self.devices.values()))
+                         sum(info["model"] == "roborock.cd.a204" for info in self.devices.values()))
             if not self.devices:
                 raise ValueError("No supported Z1 Max devices in source account")
 

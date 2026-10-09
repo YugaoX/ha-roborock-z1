@@ -10,17 +10,18 @@
 | --- | --- | --- |
 | Z1 Max 洗衣机 | `roborock.wm.a180` | 状态、故障、启动、自然结束通知 |
 | Z1 Max 分子筛干衣机 | `roborock.cd.a188` | 状态、故障、启动、丝绸护理自然结束信号 |
+| Z1 Max 分子筛干衣机（a204，实验性） | `roborock.cd.a204` | 型号由云端日志确认；状态/故障及控制需通过协议与 DPS 校验，完成信号待实测 |
 
-**此 Fork 的 main 已包含实验性 a204 支持，版本 0.3.0。**
+**此 Fork 的 main 已包含实验性 a204 支持，版本 0.3.1。**
 目标环境为 HA Core 2026.9.2 / python-roborock 7.4.2；使用 HACS 自定义仓库安装本 Fork。
 如设备仍未出现，请按 [A204_TESTING.md](A204_TESTING.md) 开启发现日志。
 
-本 Fork 额外接受精确型号 **`roborock.wm.a204`（实验性，尚未实机验证）**。
+本 Fork 额外接受精确型号 **`roborock.cd.a204`（实验性，尚未实机验证）**。
 通过原有 A01 和只读 DPS 校验后读取状态、程序时间和故障码；状态显示原始状态码，
 时间不推测单位。启动仅沿用原有 schema 校验通过的路径，不代表已验证 a204 控制语义。
-测试与回滚步骤见 [A204_TESTING.md](A204_TESTING.md)。
+a204 完成提醒默认关闭，状态含义和自然结束信号需实测后确认。测试与回滚步骤见 [A204_TESTING.md](A204_TESTING.md)。
 
-实测环境：**上游 0.2.1 的 Home Assistant 2026.2.3、python-roborock 4.8.0、ARM64 Linux**。本 Fork 0.3.0 已审查并离线测试 SDK **7.4.2**，与 HA **2026.9.2** 内置 Roborock 的依赖一致；没有在用户 HA 或 a204 实机上验证。仅针对这一 SDK 版本，未来升级 HA 前需核对其依赖，不要强制降级共享 SDK。
+实测环境：**上游 0.2.1 的 Home Assistant 2026.2.3、python-roborock 4.8.0、ARM64 Linux**。本 Fork 0.3.1 已审查并离线测试 SDK **7.4.2**，与 HA **2026.9.2** 内置 Roborock 的依赖一致；没有在用户 HA 或 a204 实机上验证。仅针对这一 SDK 版本，未来升级 HA 前需核对其依赖，不要强制降级共享 SDK。
 
 ## 安装
 
