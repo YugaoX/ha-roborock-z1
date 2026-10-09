@@ -3,9 +3,10 @@
 ## 修改范围
 
 - 基于上游提交 `e316e348d79157a108709a94a76d1533cca1d3da`，分支 `add-a204-support`。
-- 运行代码仅在 `custom_components/roborock_z1_monitor/protocol.py` 的 `MODELS`
-  加入精确型号 `roborock.wm.a204`，名称为“石头洗衣机 a204”。a180/a188 保持原样。
-- 保留所有协议、schema、响应值及启动保护；没有 SDK 适配、共享依赖修改或版本升级。
+- 在 `protocol.py` 的 `MODELS` 加入精确型号 `roborock.wm.a204`。
+- 诊断版 0.2.2 在 `client.py` 记录设备发现过程，并在线程中读取 SDK 版本，
+  避免原来的 `listdir/read_text/open` 阻塞警告；SDK 4.8.0 检查仍在任何发现请求前执行。
+- 保留所有协议、schema、响应值及启动保护；没有 SDK 适配、共享依赖修改或 SDK 版本升级。
 - 测试使用合成 schema 与模拟传输，不是 a204 实机记录，也未连接真实设备。
 
 ## 保留的校验与限制
@@ -43,7 +44,7 @@
    `<HA配置目录>/custom_components/roborock_z1_monitor/manifest.json`。
    不要嵌套整个仓库目录；不要覆盖内置 Roborock 或 SDK。
 5. 检查安装目录的 `protocol.py` 包含 `roborock.wm.a204`，再重启 HA。
-   manifest 版本仍为 `0.2.1`，所以不能仅凭版本号判断是否安装了本补丁。
+   诊断版 manifest 版本为 `0.2.2`，且 `client.py` 包含 `a204-diagnostics-1`。
 6. 在“设置 → 设备与服务”完成内置 Roborock 账号认证并保留账号条目，
    添加“石头 Z1 Max”并选择此账号。已配置过本自定义集成时，重启后验证原条目即可。
 
@@ -82,3 +83,47 @@ python scripts/build_release.py
 新增测试覆盖 a204 精确型号、缺失/变更只读字段、查询字段、原始响应保留，
 以及控制字段不符时禁止启动但仍接受只读 schema。现有启动测试也会遍历 a204。
 离线通过不等同于 HA / SDK 联调或实机兼容通过。
+
+## 0.2.2 从头安装与发现日志
+
+Fork 的默认 `main` 目前仍是原版，没有 a204；不要仅添加 Fork 根地址后直接安装默认版。
+本轮优先使用诊断 ZIP 手动安装，避免 HACS 默认分支或缓存影响结果。
+
+1. 确认 HA 当前版本和内置 Roborock 的 SDK 要求。旧日志读取到 4.8.0 元数据，
+   只能证明当时读到了该版本；不能证明当前更新后的 HA 依赖仍兼容。
+2. 备份现有配置；将 ZIP 中的 `custom_components/roborock_z1_monitor` 放入 HA
+   配置目录。确认 manifest 为 0.2.2、protocol 包含完整型号、client 包含诊断标记。
+3. 在 `configuration.yaml` 现有 `logger.logs` 中加入下面一项；没有 logger 时使用完整示例。
+   同一文件不要重复建立顶层 `logger:`。这仅开启本组件的 info 日志，不要开启 SDK/HTTP 的全量调试。
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.roborock_z1_monitor: info
+```
+
+4. 重启 HA；在设备与服务中保留或添加内置 Roborock 账号，选择与 App 中 a204 相同的账号。
+   添加“石头 Z1 Max”，选择此账号。设备自动发现，没有单独的 a204 添加步骤。
+5. 打开“设置 → 系统 → 日志”，显示原始日志，搜索 `Z1 discovery`。
+   将这些行和相关 `Z1 monitor setup failed` 错误发来，另提供 HA 当前版本。
+   诊断日志只记录模型、协议、计数、相关 schema 定义、SDK 版本与控制能力；
+   不主动记录账号、令牌、设备 ID、家庭 ID、设备名称或完整云端响应。
+6. 初次测试关闭 a204 完成提醒，不按启动；用 App 开始程序后对照只读数值。
+
+| 日志 | 下一步判断 |
+| --- | --- |
+| 没有 `build=a204-diagnostics-1` | 核对 info 日志设置、安装路径、是否重启及是否添加此集成 |
+| `skipped model=... not in allowlist` | 确认云端真实完整型号；不能只凭外壳或 App 显示名称扩展白名单 |
+| `no matching product metadata` | 云端返回设备与产品未关联；需进一步检查关联字段，不能猜型号 |
+| `read-only schema mismatch` | 按日志里的 DPS 定义适配；保留拒绝行为，不绕过校验 |
+| `expected A01, got ...` | 设备协议不同，不能复用现有 A01 适配 |
+| `finished ... a204=0` | 本次发现没有接受 a204；结合前面的跳过行、计数及账号排查 |
+| `accepted model=roborock.wm.a204` | 已通过发现和订阅；若没有实体，再检查查询/平台加载错误 |
+| `expected SDK 4.8.0, got ...` | SDK 不兼容，本次不会发现设备，不要强制降级共享依赖 |
+
+先前仅在校验失败时保留异常类型，且未知型号直接跳过，所以旧日志不能给出上述原因。
+本轮离线测试补充覆盖实际发现循环中的自有/共享 a204、a180 与 a204 并存、
+型号跳过、缺失产品、A01/schema 拒绝和版本拒绝；不代表真实 a204 已验证。
+
+日志设置参考：https://www.home-assistant.io/integrations/logger/

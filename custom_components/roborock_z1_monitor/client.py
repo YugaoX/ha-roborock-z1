@@ -7,6 +7,7 @@ patching any shared SDK classes or pretending the dryer is a washing machine.
 
 import asyncio
 import json
+import logging
 from importlib.metadata import version
 
 from roborock.data import HomeDataDevice, UserData
@@ -19,11 +20,11 @@ from roborock.web_api import PreparedRequest, RoborockApiClient, _get_hawk_authe
 
 from .protocol import FIELDS, START_FIELDS, MODELS, validate_schema, validate_values, supports_start, start_payload
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class ReadOnlyClient:
     def __init__(self, data, http_session):
-        if version("python-roborock") != "4.8.0":
-            raise ValueError("This adapter requires review before changing python-roborock 4.8.0")
         self.user = UserData.from_dict(data["user_data"])
         self.api = RoborockApiClient(data["username"], base_url=data["base_url"], session=http_session)
         self.http_session = http_session
@@ -36,6 +37,13 @@ class ReadOnlyClient:
         self.unsubscribers = []
 
     async def setup(self):
+        # Package metadata reads the filesystem; keep it off HA's event loop.
+        sdk_version = await asyncio.to_thread(version, "python-roborock")
+        _LOGGER.info("Z1 discovery build=a204-diagnostics-1 sdk=%s allowlist=%s",
+                     sdk_version, ",".join(MODELS))
+        if sdk_version != "4.8.0":
+            _LOGGER.error("Z1 discovery blocked: expected SDK 4.8.0, got %s", sdk_version)
+            raise ValueError("This adapter requires review before changing python-roborock 4.8.0")
         async with asyncio.timeout(25):
             # SDK authentication/signing; no local cryptography or token copies.
             home_id = await self.api._get_home_id(self.user)
@@ -50,15 +58,33 @@ class ReadOnlyClient:
                 raise ValueError("Device discovery failed; check source Roborock account")
             home = response["result"]
             products = {p["id"]: p for p in home.get("products", [])}
+            _LOGGER.info("Z1 discovery returned products=%d devices=%d shared=%d",
+                         len(products), len(home.get("devices", [])),
+                         len(home.get("receivedDevices", [])))
             params = create_mqtt_params(rriot)
             self.session = await create_lazy_mqtt_session(params)
             for raw in home.get("devices", []) + home.get("receivedDevices", []):
                 product = products.get(raw.get("productId"), {})
                 model = product.get("model")
-                if model not in MODELS:
+                if not product:
+                    _LOGGER.warning("Z1 discovery skipped device: no matching product metadata")
                     continue
-                validate_schema(product)
+                if model not in MODELS:
+                    _LOGGER.info("Z1 discovery skipped model=%s: not in allowlist", model)
+                    continue
+                try:
+                    validate_schema(product)
+                except ValueError:
+                    # Only schema definitions, never response values, IDs or credentials.
+                    relevant = [{key: item.get(key) for key in ("id", "code", "mode", "type")}
+                                for item in product.get("schema", [])
+                                if item.get("id") in {*FIELDS, *START_FIELDS, 200, 10000}]
+                    _LOGGER.error("Z1 discovery rejected model=%s: read-only schema mismatch; schema=%s",
+                                  model, relevant)
+                    raise
                 if raw.get("pv") != "A01":
+                    _LOGGER.error("Z1 discovery rejected model=%s: expected A01, got %s",
+                                  model, raw.get("pv"))
                     raise ValueError("Unexpected device protocol")
                 device = HomeDataDevice.from_dict(raw)
                 self.devices[device.duid] = {"model": model, "name": MODELS[model], "firmware": raw.get("fv"),
@@ -67,6 +93,10 @@ class ReadOnlyClient:
                 self.channels[device.duid] = create_mqtt_channel(self.user, params, self.session, device)
                 self.unsubscribers.append(await self.channels[device.duid].subscribe(
                     lambda message, did=device.duid: self._handle_push(did, message)))
+                _LOGGER.info("Z1 discovery accepted model=%s protocol=A01 supports_start=%s",
+                             model, self.devices[device.duid]["supports_start"])
+            _LOGGER.info("Z1 discovery finished accepted=%d a204=%d", len(self.devices),
+                         sum(info["model"] == "roborock.wm.a204" for info in self.devices.values()))
             if not self.devices:
                 raise ValueError("No supported Z1 Max devices in source account")
 
